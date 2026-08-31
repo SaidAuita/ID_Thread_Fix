@@ -2,7 +2,9 @@
 
 <div align="center">
 
-<img src="assets/InDesign_256.png" alt="ID_Thread_Fix Icon" width="128" height="128" />
+<img src="assets/ID_Thread_Fix.jpg" alt="InDesign Thread Fix Banner" style="max-width: 100%; height: auto; border-radius: 8px;" />
+
+<br/><br/>
 
 **Safe and lightweight CPU 100% thread fix utility and launcher for Adobe InDesign (2020 – 2026+)**
 
