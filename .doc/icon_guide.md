@@ -1,29 +1,34 @@
 # Инструкция по замене иконки в ID_Thread_Fix.exe
 
-Для гарантированной правильной установки оригинальной иконки в `.exe` используется утилита **Resource Hacker**.
+Для гарантированной правильной установки оригинальной иконки Adobe InDesign в `.exe` используется утилита **Resource Hacker** и исходный файл иконки `ICON1_1.ico`.
 
-## Команда для PowerShell
+## 1. Резервная копия
+
+```powershell
+Copy-Item `
+  "C:\_CODE\indesign\ID_Thread_Fix\dist\ID_Thread_Fix.exe" `
+  "C:\_CODE\indesign\ID_Thread_Fix\dist\ID_Thread_Fix_backup.exe" `
+  -Force
+```
+
+## 2. Замена иконки через Resource Hacker
 
 ```powershell
 & "C:\Program Files (x86)\Resource Hacker\ResourceHacker.exe" `
   -open "C:\_CODE\indesign\ID_Thread_Fix\dist\ID_Thread_Fix.exe" `
   -save "C:\_CODE\indesign\ID_Thread_Fix\dist\ID_Thread_Fix.exe" `
   -action addoverwrite `
-  -res "C:\_CODE\indesign\ID_Thread_Fix\assets\app.ico" `
+  -res "C:\_CODE\indesign\ID_cpu\InDesign_icons\ICON1_1.ico" `
   -mask "ICONGROUP,MAINICON," `
   -log CON
 ```
 
-## Готовый скрипт
+## 3. Готовый скрипт
 
-В репозитории есть готовый автоматический скрипт:
+В репозитории подготовлен автоматический скрипт:
 [`scripts/replace_icon.ps1`](../scripts/replace_icon.ps1)
 
 Запуск:
 ```powershell
 .\scripts\replace_icon.ps1
 ```
-
-## Автоматическая интеграция в сборку
-
-Скрипты сборки [`build.bat`](../build.bat) и [`build.ps1`](../build.ps1) автоматически проверяют наличие `ResourceHacker.exe` и вызывают замену `MAINICON` на этапе финализации бинарника.
