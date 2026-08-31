@@ -1,7 +1,6 @@
 # Build and output directories
 bin/
 obj/
-dist/
 *.user
 *.suo
 *.userosscache

@@ -4,8 +4,14 @@
 
 <img src="assets/InDesign_256.png" alt="ID_Thread_Fix Icon" width="128" height="128" />
 
-**Safe and lightweight CPU 100% thread fix utility for Adobe InDesign (2020 – 2026+)**
+**Safe and lightweight CPU 100% thread fix utility and launcher for Adobe InDesign (2020 – 2026+)**
 
+[![Download ID_Thread_Fix.exe](https://img.shields.io/badge/Download-ID__Thread__Fix.exe-2ea44f?style=for-the-badge&logo=windows)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)
+[![Direct Download from Repo](https://img.shields.io/badge/Direct_Repo_Download-dist%2FID__Thread__Fix.exe-0078d7?style=for-the-badge&logo=github)](dist/ID_Thread_Fix.exe?raw=true)
+
+<br/>
+
+[![Release](https://img.shields.io/github/v/release/SaidAuita/ID_Thread_Fix?color=blue&label=Release)](https://github.com/SaidAuita/ID_Thread_Fix/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078d7.svg)](https://microsoft.com/windows)
 [![Compatibility](https://img.shields.io/badge/Adobe%20InDesign-2020--2026%2B-ff3366.svg)](https://www.adobe.com/products/indesign.html)
@@ -30,6 +36,15 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 
 ---
 
+### 📥 Download Prebuilt Executable
+
+* **[Download latest ID_Thread_Fix.exe (GitHub Release)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
+* **[Direct Download from Repository (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
+
+*No installation required. Single portable `.exe` file (~100 KB).*
+
+---
+
 ### Key Features
 
 * **🛡️ Absolute Safety Guarantee**: The utility identifies and **strictly protects** the Main UI Thread (`MainWindowHandle`) and the Primary Process Thread (`Threads[0]`). Your open files, unsaved work, and active panels will never be closed or interrupted.
@@ -37,7 +52,7 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 * **🚀 Universal Launcher Wrapper**: Acts as a drop-in launcher for InDesign. It forwards all command-line arguments, document paths (`.indd`), and automations, waits for InDesign to start up, and automatically cleans up background threads.
 * **⚡ One-Shot Fix Mode (`--fix-only`)**: Instantly attaches to already-running InDesign instances and kills runaway threads without restarting.
 * **🔄 Background Daemon Mode (`--monitor`)**: Can run in the background (e.g., in Task Scheduler or startup) to periodically clean up runaway threads every $N$ minutes.
-* **🪶 Zero Dependencies & Portable**: Tiny standalone `.exe` (~50 KB) with native .NET Framework support built into every Windows 10/11 system. No installer or runtime setup required.
+* **🪶 Zero Dependencies & Portable**: Tiny standalone `.exe` (~100 KB) with native .NET Framework support built into every Windows 10/11 system. No installer or runtime setup required.
 * **🔎 Multi-Version Auto-Detection**: Automatically searches Windows Registry and standard Adobe directories for InDesign CC 2020, 2021, 2022, 2023, 2024, 2025, 2026+.
 
 ---
@@ -46,18 +61,18 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 
 ```mermaid
 flowchart TD
-    A[Launch ID_Thread_Fix] --> B{Is InDesign running?}
-    B -- No --> C[Find InDesign.exe in Registry / Disk]
-    C --> D[Launch InDesign + Forward Arguments]
-    D --> E[Wait for Main Window + Grace Period]
-    B -- Yes --> F[Attach to InDesign Process]
+    A(["🚀 Start ID_Thread_Fix"]) --> B{"Is InDesign<br/>running?"}
+    B -- No --> C["Find InDesign.exe<br/>(Registry / Disk)"]
+    C --> D["Launch InDesign<br/>+ Forward Args"]
+    D --> E["Wait for UI Window<br/>+ 10s Grace Period"]
+    B -- Yes --> F["Attach to<br/>InDesign Process"]
     E --> F
-    F --> G[Identify & Protect Main UI and Primary Threads]
-    G --> H[Sample Thread CPU Deltas over 2s]
-    H --> I{Any background thread >= 50-100% CPU?}
-    I -- No --> J[Done: All threads healthy]
-    I -- Yes --> K[Safely Terminate Only Rogue Thread via Win32 API]
-    K --> L[CPU load normalized, 0% idle reached!]
+    F --> G["Protect Critical Threads<br/>(Main UI & Primary)"]
+    G --> H["Sample All Threads<br/>(2s CPU Delta)"]
+    H --> I{"Rogue Thread?<br/>(CPU &ge; 50-100%)"}
+    I -- No --> J["✅ All Threads Healthy<br/>(Normal CPU)"]
+    I -- Yes --> K["⚡ Terminate Rogue Thread<br/>via Win32 API"]
+    K --> L["🎯 CPU Load Normalized<br/>(0% Idle Reached)"]
 ```
 
 ---
@@ -144,6 +159,15 @@ The resulting executable will be placed in the `dist/` directory.
 
 ---
 
+### 📥 Скачать готовый файл
+
+* **[Скачать релиз ID_Thread_Fix.exe (GitHub Releases)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
+* **[Прямое скачивание из репозитория (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
+
+*Не требует установки. Один портативный файл `.exe` (~100 КБ).*
+
+---
+
 ### Основные возможности
 
 * **🛡️ Гарантия безопасности**: Утилита **строго защищает** главный поток интерфейса (`MainWindowHandle`) и первичный поток процесса (`Threads[0]`). Открытые документы, несохраненные изменения и панели не затрагиваются и не закрываются.
@@ -151,8 +175,28 @@ The resulting executable will be placed in the `dist/` directory.
 * **🚀 Универсальный лаунчер**: Может использоваться вместо стандартного ярлыка InDesign. Корректно пробрасывает все аргументы командной строки и открываемые файлы `.indd`, дожидается запуска программы и автоматически нормализует загрузку процессора.
 * **⚡ Мгновенный фикс (`--fix-only`)**: Мгновенно подключается к уже запущенному InDesign и завершает зависшие потоки без перезапуска программы.
 * **🔄 Режим фонового мониторинга (`--monitor`)**: Может работать в фоне (или запускаться через планировщик задач) и автоматически проверять потоки каждые $N$ минут.
-* **🪶 Без зависимостей и установки**: Легковесный бинарник (~50 КБ), работающий на любой Windows 10/11 без установки дополнительного ПО.
+* **🪶 Без зависимостей и установки**: Легковесный бинарник (~100 КБ), работающий на любой Windows 10/11 без установки дополнительного ПО.
 * **🔎 Автопоиск версий InDesign**: Автоматически находит установленный InDesign через реестр Windows и стандартные пути для версий CC 2020–2026+.
+
+---
+
+### Схема работы
+
+```mermaid
+flowchart TD
+    A(["🚀 Запуск ID_Thread_Fix"]) --> B{"InDesign уже<br/>запущен?"}
+    B -- Нет --> C["Поиск InDesign.exe<br/>(Реестр / Диск)"]
+    C --> D["Запуск InDesign<br/>+ Проброс аргументов"]
+    D --> E["Ожидание окна UI<br/>+ Пауза 10с на плагины"]
+    B -- Да --> F["Подключение к процессу<br/>InDesign (PID)"]
+    E --> F
+    F --> G["Защита критических потоков<br/>(Главный UI и Первичный)"]
+    G --> H["Замер нагрузки CPU<br/>(Сэмплирование 2 сек)"]
+    H --> I{"Есть зацикленный поток?<br/>(CPU &ge; 50-100%)"}
+    I -- Нет --> J["✅ Все потоки в норме<br/>(Нагрузка штатная)"]
+    I -- Да --> K["⚡ Завершение зависшего потока<br/>через Win32 API"]
+    K --> L["🎯 Нагрузка на CPU снята<br/>(0% в режиме простоя)"]
+```
 
 ---
 
