@@ -1,0 +1,45 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ID_Thread_Fix.csproj
+
+    - name: Build with dotnet
+      run: dotnet build ID_Thread_Fix.csproj -c Release
+
+    - name: Build standalone binary via script
+      shell: cmd
+      run: build.bat
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ID_Thread_Fix
+        path: dist/ID_Thread_Fix.exe
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/ID_Thread_Fix.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
