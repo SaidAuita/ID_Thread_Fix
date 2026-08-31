@@ -34,7 +34,7 @@
 
 This bug commonly occurs due to stalled CEP extension panels, Creative Cloud library synchronizers, or font caching routines. The symptom is unmistakable: even when InDesign is completely idle, one or more CPU cores stay pegged at 100%, causing laptop fans to spin at maximum speed, battery drain, thermal throttling, and subtle UI stuttering.
 
-`ID_Thread_Fix` monitors, isolates, and terminates **only** the runaway background threads while guaranteeing 100% safety for your documents and the main InDesign UI process.
+`ID_Thread_Fix` monitors, isolates, and terminates **only** the runaway background threads while protecting the main UI thread and primary process thread.
 
 ---
 
@@ -49,7 +49,7 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 
 ### Key Features
 
-* **🛡️ Absolute Safety Guarantee**: The utility identifies and **strictly protects** the Main UI Thread (`MainWindowHandle`) and the Primary Process Thread (`Threads[0]`). Your open files, unsaved work, and active panels will never be closed or interrupted.
+* **🛡️ Protects Main UI & Primary Process Threads**: The utility deliberately excludes InDesign's main UI thread (`MainWindowHandle`) and primary process thread (`Threads[0]`) from termination.
 * **🔬 Accurate Differential CPU Sampling**: Uses a 2-second sampling window to measure exact processor time deltas. Only threads consuming $\ge 50\text{--}100\%$ of a full CPU core during idle are flagged as rogue.
 * **🚀 Universal Launcher Wrapper**: Acts as a drop-in launcher for InDesign. It forwards all command-line arguments, document paths (`.indd`), and automations, waits for InDesign to start up, and automatically cleans up background threads.
 * **⚡ One-Shot Fix Mode (`--fix-only`)**: Instantly attaches to already-running InDesign instances and kills runaway threads without restarting.
@@ -163,7 +163,7 @@ The resulting executable will be placed in the `dist/` directory.
 
 Эта проблема часто возникает из-за зависших фоновых процессов расширений CEP, синхронизации библиотек Creative Cloud или построения кэша шрифтов. Симптом очевиден: даже в режиме полного простоя InDesign одно или несколько ядер процессора загружены на 100%, кулеры ноутбука/ПК работают на максимуме, батарея быстро разряжается, а интерфейс начинает подтормаживать.
 
-`ID_Thread_Fix` находит, изолирует и завершает **только** зацикленные фоновые потоки, гарантируя 100% сохранность ваших документов и главного UI-потока InDesign.
+`ID_Thread_Fix` находит, изолирует и завершает **только** зацикленные фоновые потоки, целенаправленно исключая из завершения главный UI-поток и первичный процесс InDesign.
 
 ---
 
@@ -178,7 +178,7 @@ The resulting executable will be placed in the `dist/` directory.
 
 ### Основные возможности
 
-* **🛡️ Гарантия безопасности**: Утилита **строго защищает** главный поток интерфейса (`MainWindowHandle`) и первичный поток процесса (`Threads[0]`). Открытые документы, несохраненные изменения и панели не затрагиваются и не закрываются.
+* **🛡️ Защита главного UI и первичного процесса**: Утилита целенаправленно исключает из завершения главный поток интерфейса (`MainWindowHandle`) и первичный поток процесса (`Threads[0]`).
 * **🔬 Точный замер CPU (сэмплирование)**: Измеряет дельту процессорного времени за 2-секундный интервал. Зацикленными считаются только потоки, непрерывно потребляющие $\ge 50\text{--}100\%$ ядра в режиме простоя.
 * **🚀 Универсальный лаунчер**: Может использоваться вместо стандартного ярлыка InDesign. Корректно пробрасывает все аргументы командной строки и открываемые файлы `.indd`, дожидается запуска программы и автоматически нормализует загрузку процессора.
 * **⚡ Мгновенный фикс (`--fix-only`)**: Мгновенно подключается к уже запущенному InDesign и завершает зависшие потоки без перезапуска программы.
