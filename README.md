@@ -138,13 +138,19 @@ The resulting executable will be placed in the `dist/` directory.
 * **OS**: Windows 10, Windows 11, Windows 8.1, Windows 7 (x64 / x86 / ARM64).
 * **Adobe InDesign**: CC 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026+.
 
----
+## 🛠️ Other Projects
 
-### 🛠️ Other Projects by SaidAuita
+**[Free Adobe Automation Tools](https://ph-cu-s.com/tools)**
+* Collection of free scripts and automation tools for Adobe Creative Cloud applications.
 
-* **[AI Dimension](https://github.com/SaidAuita/AI-Dimension)** — Advanced technical dimensioning, bounds, and leader line extension panel for Adobe Illustrator.
-* **[ID Dimension](https://github.com/SaidAuita/ID-Dimension)** — Professional technical dimensioning script and palette for Adobe InDesign.
-* **[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)** — Native ComfyUI generative AI integration panel for Adobe Photoshop.
+**[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
+* Advanced technical dimensioning, bounds, and leader line extension panel for Adobe Illustrator.
+
+**[ID Dimension](https://github.com/SaidAuita/ID-Dimension)**
+* Professional technical dimensioning script and palette for Adobe InDesign.
+
+**[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
+* A powerful Photoshop plugin powered by ComfyUI, providing direct integration with local generative models.
 
 ---
 
@@ -251,6 +257,20 @@ build.bat
 dotnet build -c Release
 ```
 Готовый исполняемый файл будет помещен в папку `dist/`.
+
+## 🛠️ Мои проекты
+
+**[Free Adobe Automation Tools](https://ph-cu-s.com/tools)**
+* Каталог бесплатных скриптов и инструментов автоматизации для программ Adobe.
+
+**[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
+* Аналогичное расширение для простановки размеров и выносок в Adobe Illustrator.
+
+**[ID Dimension](https://github.com/SaidAuita/ID-Dimension)**
+* Профессиональный инструмент и палитра для простановки размеров в Adobe InDesign.
+
+**[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
+* Мощный плагин для Photoshop на базе ComfyUI, обеспечивающий прямую интеграцию с локальными генеративными моделями.
 
 ---
 
