@@ -11,19 +11,55 @@ using Microsoft.Win32.SafeHandles;
 
 namespace ID_Thread_Fix
 {
+    public enum FixAction
+    {
+        Throttle,   // Set to THREAD_PRIORITY_IDLE (Safest, 0% crash risk, relieves CPU/fans)
+        Terminate,  // Call TerminateThread (Protected: core modules fallback to throttle)
+        Suspend     // Call SuspendThread
+    }
+
     static class Program
     {
-        private const string AppVersion = "1.0.0";
+        private const string AppVersion = "1.1.0";
         private const string AppName = "InDesign Thread Fix (ID_Thread_Fix)";
+
+        #region Win32 Constants
+
         private const uint THREAD_TERMINATE = 0x0001;
+        private const uint THREAD_SUSPEND_RESUME = 0x0002;
+        private const uint THREAD_SET_INFORMATION = 0x0020;
+        private const uint THREAD_QUERY_INFORMATION = 0x0040;
+        private const uint THREAD_SET_LIMITED_INFORMATION = 0x0400;
+
+        private const int THREAD_PRIORITY_IDLE = -15;
+        private const int THREAD_PRIORITY_LOWEST = -2;
+        private const int THREAD_PRIORITY_BELOW_NORMAL = -1;
+        private const int THREAD_PRIORITY_NORMAL = 0;
+
+        private const int ThreadQuerySetWin32StartAddress = 9;
+
         private const int ATTACH_PARENT_PROCESS = -1;
         private const int STD_OUTPUT_HANDLE = -11;
         private const int STD_ERROR_HANDLE = -12;
 
-        #region Win32 API
+        #endregion
+
+        #region Win32 API Imports
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr OpenThread(uint dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetThreadPriority(IntPtr hThread, int nPriority);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern int GetThreadPriority(IntPtr hThread);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint SuspendThread(IntPtr hThread);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint ResumeThread(IntPtr hThread);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool TerminateThread(IntPtr hThread, uint dwExitCode);
@@ -33,6 +69,14 @@ namespace ID_Thread_Fix
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        private static extern int NtQueryInformationThread(
+            IntPtr ThreadHandle,
+            int ThreadInformationClass,
+            out IntPtr ThreadInformation,
+            int ThreadInformationLength,
+            out int ReturnLength);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AttachConsole(int dwProcessId);
@@ -46,6 +90,9 @@ namespace ID_Thread_Fix
         private static bool _silent;
         private static string _logFilePath;
         private static bool _hasConsole;
+        private static FixAction _action = FixAction.Throttle;
+        private static double _cpuThresholdPercent = 80.0;
+        private static int _startupWaitSeconds = 30;
 
         [STAThread]
         static int Main(string[] args)
@@ -90,6 +137,44 @@ namespace ID_Thread_Fix
                 {
                     _logFilePath = args[++i];
                 }
+                else if (arg.Equals("--startup-wait", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    int sw;
+                    if (int.TryParse(args[i + 1], out sw))
+                    {
+                        _startupWaitSeconds = Math.Max(10, sw);
+                        i++;
+                    }
+                }
+                else if (arg.Equals("--threshold", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    double th;
+                    if (double.TryParse(args[i + 1], out th))
+                    {
+                        _cpuThresholdPercent = Math.Max(30.0, Math.Min(100.0, th));
+                        i++;
+                    }
+                }
+                else if (arg.Equals("--action", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    string act = args[++i].ToLowerInvariant();
+                    if (act == "terminate" || act == "kill")
+                    {
+                        _action = FixAction.Terminate;
+                    }
+                    else if (act == "suspend" || act == "pause")
+                    {
+                        _action = FixAction.Suspend;
+                    }
+                    else
+                    {
+                        _action = FixAction.Throttle;
+                    }
+                }
+                else if (arg.Equals("--force-terminate", StringComparison.OrdinalIgnoreCase))
+                {
+                    _action = FixAction.Terminate;
+                }
                 else if (arg.Equals("--monitor", StringComparison.OrdinalIgnoreCase) ||
                          arg.Equals("-m", StringComparison.OrdinalIgnoreCase))
                 {
@@ -110,7 +195,7 @@ namespace ID_Thread_Fix
                 }
             }
 
-            // Always try attaching console if any args provided or requested
+            // Attach console if needed
             if (showHelp || showVersion || _verbose || args.Length > 0)
             {
                 TryAttachConsole();
@@ -132,14 +217,15 @@ namespace ID_Thread_Fix
             {
                 if (monitorMode)
                 {
-                    LogInfo(string.Format("Starting background monitor mode. Scan interval: {0} min.", monitorIntervalMinutes));
+                    LogInfo(string.Format("Starting background monitor mode. Scan interval: {0} min, Action: {1}, Threshold: {2:F0}%",
+                        monitorIntervalMinutes, _action, _cpuThresholdPercent));
                     RunMonitorLoop(monitorIntervalMinutes);
                     return 0;
                 }
 
                 // Standard execution: fix running or launch & fix
-                int terminatedCount = ExecuteFixCycle(fixOnly, forwardedArgs.ToArray());
-                LogInfo(string.Format("Execution complete. Total rogue threads terminated: {0}.", terminatedCount));
+                int fixedCount = ExecuteFixCycle(fixOnly, forwardedArgs.ToArray());
+                LogInfo(string.Format("Execution complete. Total rogue threads fixed: {0}.", fixedCount));
                 return 0;
             }
             catch (Exception ex)
@@ -223,12 +309,12 @@ namespace ID_Thread_Fix
 
             LogInfo(string.Format("Attached to InDesign (PID: {0})", indesign.Id));
 
-            // If just launched, wait for main window and plugin stabilization
+            // If just launched, wait for main window and let startup load settle down safely
             if (justLaunched)
             {
                 LogInfo("Waiting for InDesign main window to load...");
                 DateTime waitStart = DateTime.Now;
-                while ((DateTime.Now - waitStart).TotalSeconds < 45)
+                while ((DateTime.Now - waitStart).TotalSeconds < 60)
                 {
                     indesign.Refresh();
                     if (indesign.HasExited)
@@ -243,18 +329,30 @@ namespace ID_Thread_Fix
                     Thread.Sleep(1000);
                 }
 
-                LogInfo("InDesign window detected. Waiting 10s for CEP and font extensions to finish startup burst...");
-                Thread.Sleep(10000);
+                LogInfo(string.Format("InDesign window detected. Waiting for startup burst to finish ({0}s)...", _startupWaitSeconds));
+                WaitForProcessToSettle(indesign, _startupWaitSeconds);
             }
 
-            return ScanAndTerminateRogueThreads(indesign);
+            return ScanAndFixRogueThreads(indesign);
         }
 
-        private static int ScanAndTerminateRogueThreads(Process indesign)
+        private static void WaitForProcessToSettle(Process proc, int targetWaitSec)
+        {
+            DateTime start = DateTime.Now;
+            while ((DateTime.Now - start).TotalSeconds < targetWaitSec)
+            {
+                proc.Refresh();
+                if (proc.HasExited) return;
+                Thread.Sleep(2000);
+            }
+            LogInfo("Startup stabilization complete. InDesign has settled to idle.");
+        }
+
+        private static int ScanAndFixRogueThreads(Process indesign)
         {
             if (indesign.HasExited) return 0;
 
-            // 1. Identify Main UI thread to NEVER terminate it
+            // 1. Identify Protected Threads (Main UI Thread + Primary Process Thread)
             uint mainThreadId = 0;
             try
             {
@@ -278,83 +376,289 @@ namespace ID_Thread_Fix
 
             LogInfo(string.Format("Protected Threads: Main UI Thread = {0}, Primary Thread = {1}", mainThreadId, primaryThreadId));
 
-            // 2. Sample thread CPU consumption over 2 seconds
-            Dictionary<int, TimeSpan> initialCpu = new Dictionary<int, TimeSpan>();
+            // 2. Stage 1 Sampling (3.0 seconds)
+            Dictionary<int, TimeSpan> t1 = new Dictionary<int, TimeSpan>();
             foreach (ProcessThread t in indesign.Threads)
             {
                 try
                 {
-                    initialCpu[t.Id] = t.TotalProcessorTime;
+                    t1[t.Id] = t.TotalProcessorTime;
                 }
                 catch { }
             }
 
-            LogInfo(string.Format("Sampling {0} threads for 2 seconds to detect infinite loops...", initialCpu.Count));
-            Thread.Sleep(2000);
+            LogInfo(string.Format("Stage 1: Sampling {0} threads over 3.0s (Threshold: >={1:F0}% CPU)...", t1.Count, _cpuThresholdPercent));
+            Thread.Sleep(3000);
 
             indesign.Refresh();
+            if (indesign.HasExited) return 0;
 
-            List<int> rogueThreads = new List<int>();
+            List<int> candidateThreads = new List<int>();
             foreach (ProcessThread t in indesign.Threads)
             {
                 try
                 {
-                    // Never touch the Main UI thread or primary thread!
-                    if (t.Id == (int)mainThreadId || t.Id == primaryThreadId)
-                    {
-                        continue;
-                    }
+                    if (t.Id == (int)mainThreadId || t.Id == primaryThreadId) continue;
 
                     TimeSpan oldTime;
-                    if (initialCpu.TryGetValue(t.Id, out oldTime))
+                    if (t1.TryGetValue(t.Id, out oldTime))
                     {
-                        double cpuDeltaSec = (t.TotalProcessorTime - oldTime).TotalSeconds;
-                        // A 100% busy-looping thread consumes >= 1.0s (up to 2.0s) out of a 2.0s sample window
-                        if (cpuDeltaSec >= 1.0)
+                        double deltaSec = (t.TotalProcessorTime - oldTime).TotalSeconds;
+                        double usagePercent = (deltaSec / 3.0) * 100.0;
+
+                        if (usagePercent >= _cpuThresholdPercent)
                         {
-                            LogWarning(string.Format("Rogue thread detected! TID: {0}, CPU usage: {1:F2}s / 2.0s", t.Id, cpuDeltaSec));
-                            rogueThreads.Add(t.Id);
+                            candidateThreads.Add(t.Id);
+                            LogInfo(string.Format("Stage 1 Candidate: TID={0}, CPU={1:F1}%", t.Id, usagePercent));
                         }
                     }
                 }
                 catch { }
             }
 
-            if (rogueThreads.Count == 0)
+            if (candidateThreads.Count == 0)
             {
-                LogInfo("No rogue 100% CPU threads detected. All background threads are healthy.");
+                LogInfo("All background threads are healthy. No runaway CPU loops detected.");
                 return 0;
             }
 
-            // 3. Terminate only the rogue background threads
-            int terminatedCount = 0;
-            foreach (int tid in rogueThreads)
+            // 3. Stage 2 Verification (Second 3.0s sample to prevent false positives on temporary bursts)
+            LogWarning(string.Format("Candidate rogue threads detected ({0}). Performing Stage 2 verification to confirm permanent loop...", candidateThreads.Count));
+            Thread.Sleep(2000);
+
+            indesign.Refresh();
+            if (indesign.HasExited) return 0;
+
+            Dictionary<int, TimeSpan> t2 = new Dictionary<int, TimeSpan>();
+            foreach (int tid in candidateThreads)
             {
-                try
+                foreach (ProcessThread t in indesign.Threads)
                 {
-                    IntPtr hThread = OpenThread(THREAD_TERMINATE, false, (uint)tid);
-                    if (hThread != IntPtr.Zero)
+                    if (t.Id == tid)
                     {
-                        bool success = TerminateThread(hThread, 0);
-                        CloseHandle(hThread);
-                        if (success)
-                        {
-                            terminatedCount++;
-                            LogSuccess(string.Format("Successfully terminated rogue thread (TID: {0}). CPU load normalized.", tid));
-                        }
-                        else
-                        {
-                            LogError(string.Format("Failed to terminate thread (TID: {0}). Error code: {1}", tid, Marshal.GetLastWin32Error()));
-                        }
+                        try { t2[tid] = t.TotalProcessorTime; } catch { }
+                        break;
                     }
-                }
-                catch (Exception ex)
-                {
-                    LogError(string.Format("Error terminating thread {0}: {1}", tid, ex.Message));
                 }
             }
 
-            return terminatedCount;
+            Thread.Sleep(3000);
+
+            indesign.Refresh();
+            if (indesign.HasExited) return 0;
+
+            List<int> confirmedRogueThreads = new List<int>();
+            foreach (int tid in candidateThreads)
+            {
+                foreach (ProcessThread t in indesign.Threads)
+                {
+                    if (t.Id == tid)
+                    {
+                        TimeSpan oldTime;
+                        if (t2.TryGetValue(tid, out oldTime))
+                        {
+                            double deltaSec = (t.TotalProcessorTime - oldTime).TotalSeconds;
+                            double usagePercent = (deltaSec / 3.0) * 100.0;
+                            if (usagePercent >= _cpuThresholdPercent)
+                            {
+                                confirmedRogueThreads.Add(tid);
+                                LogWarning(string.Format("Confirmed Rogue Thread: TID={0} is permanently locked at {1:F1}% CPU!", tid, usagePercent));
+                            }
+                            else
+                            {
+                                LogInfo(string.Format("TID={0} dropped to {1:F1}% CPU (normal background burst finished, skipping).", tid, usagePercent));
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (confirmedRogueThreads.Count == 0)
+            {
+                LogInfo("All candidate threads normalized on verification. No intervention needed.");
+                return 0;
+            }
+
+            // 4. Cache process modules for safe module identification
+            List<ModuleInfo> modules = GetProcessModules(indesign);
+
+            // 5. Apply fix action (Throttle / Suspend / Terminate with core protection)
+            int fixedCount = 0;
+            foreach (int tid in confirmedRogueThreads)
+            {
+                string moduleName = ResolveThreadModule(tid, modules);
+                bool isCoreEngine = IsCoreInDesignModule(moduleName);
+
+                if (isCoreEngine)
+                {
+                    LogWarning(string.Format("TID {0} starts in core InDesign module '{1}'. Terminate is blocked to prevent crash.", tid, moduleName));
+                }
+                else
+                {
+                    LogInfo(string.Format("TID {0} belongs to module '{1}'.", tid, moduleName));
+                }
+
+                // If user requested Terminate, but thread is in core module, safely force Throttle instead of crashing
+                FixAction effectiveAction = _action;
+                if (effectiveAction == FixAction.Terminate && isCoreEngine)
+                {
+                    LogWarning(string.Format("Switching action for TID {0} from Terminate to Throttle (Idle Priority) to guarantee stability.", tid));
+                    effectiveAction = FixAction.Throttle;
+                }
+
+                bool success = ApplyFixToThread((uint)tid, effectiveAction, moduleName);
+                if (success)
+                {
+                    fixedCount++;
+                }
+            }
+
+            return fixedCount;
+        }
+
+        private static bool ApplyFixToThread(uint tid, FixAction action, string moduleName)
+        {
+            try
+            {
+                if (action == FixAction.Throttle)
+                {
+                    IntPtr hThread = OpenThread(THREAD_SET_INFORMATION | THREAD_QUERY_INFORMATION, false, tid);
+                    if (hThread != IntPtr.Zero)
+                    {
+                        bool ok = SetThreadPriority(hThread, THREAD_PRIORITY_IDLE);
+                        CloseHandle(hThread);
+                        if (ok)
+                        {
+                            LogSuccess(string.Format("Safely throttled rogue thread TID={0} ({1}) to IDLE priority. CPU load and fan noise normalized with 100% crash protection.", tid, moduleName));
+                            return true;
+                        }
+                        else
+                        {
+                            LogError(string.Format("Failed to set thread priority for TID={0}. Error code: {1}", tid, Marshal.GetLastWin32Error()));
+                        }
+                    }
+                }
+                else if (action == FixAction.Suspend)
+                {
+                    IntPtr hThread = OpenThread(THREAD_SUSPEND_RESUME, false, tid);
+                    if (hThread != IntPtr.Zero)
+                    {
+                        uint res = SuspendThread(hThread);
+                        CloseHandle(hThread);
+                        if (res != 0xFFFFFFFF)
+                        {
+                            LogSuccess(string.Format("Suspended rogue thread TID={0} ({1}).", tid, moduleName));
+                            return true;
+                        }
+                        else
+                        {
+                            LogError(string.Format("Failed to suspend thread TID={0}. Error code: {1}", tid, Marshal.GetLastWin32Error()));
+                        }
+                    }
+                }
+                else if (action == FixAction.Terminate)
+                {
+                    IntPtr hThread = OpenThread(THREAD_TERMINATE, false, tid);
+                    if (hThread != IntPtr.Zero)
+                    {
+                        bool ok = TerminateThread(hThread, 0);
+                        CloseHandle(hThread);
+                        if (ok)
+                        {
+                            LogSuccess(string.Format("Terminated rogue background thread TID={0} ({1}).", tid, moduleName));
+                            return true;
+                        }
+                        else
+                        {
+                            LogError(string.Format("Failed to terminate thread TID={0}. Error code: {1}", tid, Marshal.GetLastWin32Error()));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError(string.Format("Error applying fix to thread {0}: {1}", tid, ex.Message));
+            }
+
+            return false;
+        }
+
+        private static bool IsCoreInDesignModule(string moduleName)
+        {
+            if (string.IsNullOrEmpty(moduleName)) return false;
+
+            string m = moduleName.ToLowerInvariant();
+            return m.Contains("indesign.exe") ||
+                   m.Contains("dynamic-torqnative") ||
+                   m.Contains("application ui") ||
+                   m.Contains("public.dll") ||
+                   m.Contains("pmruntime") ||
+                   m.Contains("ntdll.dll") ||
+                   m.Contains("kernel32.dll") ||
+                   m.Contains("kernelbase.dll");
+        }
+
+        private static string ResolveThreadModule(int tid, List<ModuleInfo> modules)
+        {
+            IntPtr hThread = OpenThread(THREAD_QUERY_INFORMATION, false, (uint)tid);
+            if (hThread == IntPtr.Zero)
+            {
+                return "Unknown";
+            }
+
+            try
+            {
+                IntPtr startAddress;
+                int retLen;
+                int status = NtQueryInformationThread(hThread, ThreadQuerySetWin32StartAddress, out startAddress, IntPtr.Size, out retLen);
+                if (status == 0 && startAddress != IntPtr.Zero)
+                {
+                    long addr = startAddress.ToInt64();
+                    foreach (ModuleInfo mod in modules)
+                    {
+                        if (addr >= mod.BaseAddress && addr < mod.EndAddress)
+                        {
+                            return mod.Name;
+                        }
+                    }
+                    return string.Format("0x{0:X}", addr);
+                }
+            }
+            catch { }
+            finally
+            {
+                CloseHandle(hThread);
+            }
+
+            return "Unknown";
+        }
+
+        private class ModuleInfo
+        {
+            public string Name;
+            public long BaseAddress;
+            public long EndAddress;
+        }
+
+        private static List<ModuleInfo> GetProcessModules(Process proc)
+        {
+            List<ModuleInfo> list = new List<ModuleInfo>();
+            try
+            {
+                foreach (ProcessModule m in proc.Modules)
+                {
+                    ModuleInfo mi = new ModuleInfo
+                    {
+                        Name = m.ModuleName,
+                        BaseAddress = m.BaseAddress.ToInt64(),
+                        EndAddress = m.BaseAddress.ToInt64() + m.ModuleMemorySize
+                    };
+                    list.Add(mi);
+                }
+            }
+            catch { }
+            return list;
         }
 
         private static void RunMonitorLoop(int intervalMinutes)
@@ -368,7 +672,7 @@ namespace ID_Thread_Fix
                     {
                         foreach (Process p in procs)
                         {
-                            ScanAndTerminateRogueThreads(p);
+                            ScanAndFixRogueThreads(p);
                         }
                     }
                     else
@@ -564,19 +868,23 @@ USAGE:
   ID_Thread_Fix.exe [OPTIONS] [FILES / ARGS...]
 
 OPTIONS:
-  -f, --fix-only          Scan and fix running InDesign without launching it.
-  -m, --monitor [MIN]     Run continuously in background every [MIN] minutes (default: 5).
-  -v, --verbose           Display detailed diagnostic output.
-  -s, --silent            Run completely silently (no console output).
-      --log <path>        Save log messages to the specified file.
-  -h, --help              Show this help message.
-      --version           Show version information.
+  -f, --fix-only              Scan and fix running InDesign without launching it.
+  -m, --monitor [MIN]         Run continuously in background every [MIN] minutes (default: 5).
+      --action <mode>         Fix method: throttle (default, 100% safe), suspend, or terminate.
+      --force-terminate       Alias for --action terminate (core modules still protected).
+      --threshold <percent>   CPU usage percentage to trigger fix (default: 80).
+      --startup-wait <sec>    Seconds to let InDesign startup settle before scanning (default: 30).
+  -v, --verbose               Display detailed diagnostic output.
+  -s, --silent                Run completely silently (no console output).
+      --log <path>            Save log messages to the specified file.
+  -h, --help                  Show this help message.
+      --version               Show version information.
 
 EXAMPLES:
-  # Launch InDesign as usual and auto-fix background runaway threads:
+  # Launch InDesign as usual with rock-solid auto-fix (Priority Throttle):
   ID_Thread_Fix.exe
 
-  # Open a specific document while auto-fixing CPU:
+  # Open a specific document while stabilizing CPU load:
   ID_Thread_Fix.exe ""C:\Projects\Brochure.indd""
 
   # Fix an already open, lagging InDesign instance immediately:

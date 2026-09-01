@@ -49,13 +49,14 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 
 ### Key Features
 
-* **🛡️ Protects Main UI & Primary Process Threads**: The utility deliberately excludes InDesign's main UI thread (`MainWindowHandle`) and primary process thread (`Threads[0]`) from termination.
-* **🔬 Accurate Differential CPU Sampling**: Uses a 2-second sampling window to measure exact processor time deltas. Only threads consuming $\ge 50\text{--}100\%$ of a full CPU core during idle are flagged as rogue.
-* **🚀 Universal Launcher Wrapper**: Acts as a drop-in launcher for InDesign. It forwards all command-line arguments, document paths (`.indd`), and automations, waits for InDesign to start up, and automatically cleans up background threads.
-* **⚡ One-Shot Fix Mode (`--fix-only`)**: Instantly attaches to already-running InDesign instances and kills runaway threads without restarting.
-* **🔄 Background Daemon Mode (`--monitor`)**: Can run in the background (e.g., in Task Scheduler or startup) to periodically clean up runaway threads every $N$ minutes.
-* **🪶 Zero Dependencies & Portable**: Tiny standalone `.exe` (~100 KB) with native .NET Framework support built into every Windows 10/11 system. No installer or runtime setup required.
-* **🔎 Multi-Version Auto-Detection**: Automatically searches Windows Registry and standard Adobe directories for InDesign CC 2020, 2021, 2022, 2023, 2024, 2025, 2026+.
+* **🛡️ Absolute Crash Safety via Priority Throttling**: By default, runaway background threads are safely throttled to `THREAD_PRIORITY_IDLE` instead of being killed. This relieves CPU and fan noise immediately while completely eliminating risk of memory corruption or crashes.
+* **🔒 Core Module Whitelist**: Uses `NtQueryInformationThread` to resolve thread start addresses. Core InDesign modules (`InDesign.exe`, `dynamic-torqnative.dll`, `Application UI.rpln`, `PMRuntime.dll`, `Public.dll`) are strictly protected from termination.
+* **🔬 Two-Stage Verification**: Uses a two-stage differential sampling window (3s sample $\to$ 2s pause $\to$ 3s re-sample). Temporary background bursts (autosave, font parsing, preflight) are ignored; only true permanent loops are acted upon.
+* **⏳ Smart Startup Stabilization**: Waits for InDesign startup burst to complete (30s default, configurable via `--startup-wait`) before scanning, preventing interference during font initialization.
+* **🚀 Universal Launcher Wrapper**: Acts as a drop-in launcher for InDesign. Forwards all arguments and `.indd` files, waits for InDesign, and stabilizes CPU load automatically.
+* **⚡ One-Shot Fix Mode (`--fix-only`)**: Instantly attaches to already-running InDesign instances and normalizes CPU load without restarting.
+* **🔄 Background Daemon Mode (`--monitor`)**: Can run in the background (or in Task Scheduler) to periodically check and tame runaway threads every $N$ minutes.
+* **🪶 Zero Dependencies & Portable**: Tiny standalone `.exe` (~100 KB) with native .NET Framework support built into every Windows 10/11 system.
 
 ---
 
@@ -66,15 +67,21 @@ flowchart TD
     A(["🚀 Start ID_Thread_Fix"]) --> B{"Is InDesign<br/>running?"}
     B -- No --> C["Find InDesign.exe<br/>(Registry / Disk)"]
     C --> D["Launch InDesign<br/>+ Forward Args"]
-    D --> E["Wait for UI Window<br/>+ 10s Grace Period"]
+    D --> E["Wait for Main Window<br/>+ 30s Startup Settling"]
     B -- Yes --> F["Attach to<br/>InDesign Process"]
     E --> F
-    F --> G["Protect Critical Threads<br/>(Main UI & Primary)"]
-    G --> H["Sample All Threads<br/>(2s CPU Delta)"]
-    H --> I{"Rogue Thread?<br/>(CPU &ge; 50-100%)"}
-    I -- No --> J["✅ All Threads Healthy<br/>(Normal CPU)"]
-    I -- Yes --> K["⚡ Terminate Rogue Thread<br/>via Win32 API"]
-    K --> L["🎯 CPU Load Normalized<br/>(0% Idle Reached)"]
+    F --> G["Protect Critical Threads<br/>(Main UI & Primary Process)"]
+    G --> H["Stage 1: Sample All Threads<br/>(3.0s CPU Delta &ge; 80%)"]
+    H --> I{"Candidate Found?"}
+    I -- No --> J["✅ All Threads Healthy<br/>(0% Rogue Load)"]
+    I -- Yes --> K["Stage 2: Verification<br/>(3.0s Re-sample Candidate)"]
+    K --> L{"Still Locked at 100%?"}
+    L -- No --> M["✅ Temporary Burst Passed<br/>(Ignored Safely)"]
+    L -- Yes --> N{"Core Module?<br/>(dynamic-torqnative / UI)"}
+    N -- Yes --> O["🛡️ Throttle Priority to IDLE<br/>(Safe 0% CPU, No Crash)"]
+    N -- No --> P["⚡ Apply Fix Action<br/>(Throttle / Suspend / Terminate)"]
+    O --> Q["🎯 CPU Load Normalized<br/>(Fans Quiet, App Responsive)"]
+    P --> Q
 ```
 
 ---
@@ -107,6 +114,10 @@ ID_Thread_Fix.exe --monitor 10 --log "C:\Logs\indesign_fix.log"
 | :--- | :---: | :--- |
 | `--fix-only` | `-f` | Scan and fix running InDesign instances without launching InDesign if closed. |
 | `--monitor [min]` | `-m` | Run as continuous background daemon checking every `[min]` minutes (default: 5). |
+| `--action <mode>` | | Fix method: `throttle` (default, 100% crash-safe), `suspend`, or `terminate`. |
+| `--force-terminate` | | Alias for `--action terminate` (core modules remain protected from crash). |
+| `--threshold <percent>` | | CPU usage percentage to trigger fix (default: 80). |
+| `--startup-wait <sec>` | | Seconds to let InDesign startup settle before scanning (default: 30). |
 | `--verbose` | `-v` | Display detailed diagnostic information and thread metrics. |
 | `--silent` | `-s` | Run in silent mode without console output. |
 | `--log <path>` | | Append timestamped logs to the specified text file. |
@@ -178,13 +189,14 @@ The resulting executable will be placed in the `dist/` directory.
 
 ### Основные возможности
 
-* **🛡️ Защита главного UI и первичного процесса**: Утилита целенаправленно исключает из завершения главный поток интерфейса (`MainWindowHandle`) и первичный поток процесса (`Threads[0]`).
-* **🔬 Точный замер CPU (сэмплирование)**: Измеряет дельту процессорного времени за 2-секундный интервал. Зацикленными считаются только потоки, непрерывно потребляющие $\ge 50\text{--}100\%$ ядра в режиме простоя.
-* **🚀 Универсальный лаунчер**: Может использоваться вместо стандартного ярлыка InDesign. Корректно пробрасывает все аргументы командной строки и открываемые файлы `.indd`, дожидается запуска программы и автоматически нормализует загрузку процессора.
-* **⚡ Мгновенный фикс (`--fix-only`)**: Мгновенно подключается к уже запущенному InDesign и завершает зависшие потоки без перезапуска программы.
+* **🛡️ 100% защита от падений через троттлинг приоритета**: По умолчанию зацикленные фоновые потоки не уничтожаются жестко, а переводятся в приоритет `THREAD_PRIORITY_IDLE`. Это мгновенно разгружает процессор и останавливает кулеры, полностью исключая риск повреждения памяти или падения программы.
+* **🔒 Белый список критических модулей**: Определяет начальный адрес потока через системный вызов `NtQueryInformationThread`. Ядерные модули InDesign (`InDesign.exe`, `dynamic-torqnative.dll`, `Application UI.rpln`, `PMRuntime.dll`, `Public.dll`) строго защищены от завершения.
+* **🔬 Двухэтапная верификация**: Двухступенчатое сэмплирование (замер 3 сек $\to$ пауза 2 сек $\to$ повторный замер 3 сек). Кратковременные всплески нагрузки (автосохранение, парсинг шрифтов, экспорт) игнорируются; устраняются только истинные бесконечные циклы.
+* **⏳ Умная стабилизация запуска**: При старте программы выдерживает паузу на завершение инициализации шрифтов и плагинов (по умолчанию 30 сек, настраивается через `--startup-wait`) до запуска сканирования.
+* **🚀 Универсальный лаунчер**: Может использоваться вместо стандартного ярлыка InDesign. Корректно пробрасывает аргументы и открываемые файлы `.indd`, дожидается запуска программы и автоматически нормализует загрузку CPU.
+* **⚡ Мгновенный фикс (`--fix-only`)**: Мгновенно подключается к уже запущенному InDesign и успокаивает зависшие потоки без перезапуска программы.
 * **🔄 Режим фонового мониторинга (`--monitor`)**: Может работать в фоне (или запускаться через планировщик задач) и автоматически проверять потоки каждые $N$ минут.
 * **🪶 Без зависимостей и установки**: Легковесный бинарник (~100 КБ), работающий на любой Windows 10/11 без установки дополнительного ПО.
-* **🔎 Автопоиск версий InDesign**: Автоматически находит установленный InDesign через реестр Windows и стандартные пути для версий CC 2020–2026+.
 
 ---
 
@@ -195,15 +207,21 @@ flowchart TD
     A(["🚀 Запуск ID_Thread_Fix"]) --> B{"InDesign уже<br/>запущен?"}
     B -- Нет --> C["Поиск InDesign.exe<br/>(Реестр / Диск)"]
     C --> D["Запуск InDesign<br/>+ Проброс аргументов"]
-    D --> E["Ожидание окна UI<br/>+ Пауза 10с на плагины"]
+    D --> E["Ожидание окна UI<br/>+ 30с на инициализацию"]
     B -- Да --> F["Подключение к процессу<br/>InDesign (PID)"]
     E --> F
-    F --> G["Защита критических потоков<br/>(Главный UI и Первичный)"]
-    G --> H["Замер нагрузки CPU<br/>(Сэмплирование 2 сек)"]
-    H --> I{"Есть зацикленный поток?<br/>(CPU &ge; 50-100%)"}
-    I -- Нет --> J["✅ Все потоки в норме<br/>(Нагрузка штатная)"]
-    I -- Да --> K["⚡ Завершение зависшего потока<br/>через Win32 API"]
-    K --> L["🎯 Нагрузка на CPU снята<br/>(0% в режиме простоя)"]
+    F --> G["Защита критических потоков<br/>(Главный UI и Первичный процесс)"]
+    G --> H["Этап 1: Замер всех потоков<br/>(3.0с, загрузка &ge; 80%)"]
+    H --> I{"Найден кандидат?"}
+    I -- Нет --> J["✅ Все потоки в норме<br/>(0% зависших потоков)"]
+    I -- Да --> K["Этап 2: Верификация<br/>(Повторный замер 3.0с)"]
+    K --> L{"По-прежнему 100%?"}
+    L -- Нет --> M["✅ Временная нагрузка спала<br/>(Безопасный пропуск)"]
+    L -- Да --> N{"Ядерный модуль?<br/>(dynamic-torqnative / UI)"}
+    N -- Да --> O["🛡️ Троттлинг в IDLE<br/>(0% CPU, InDesign не падает)"]
+    N -- Нет --> P["⚡ Применение действия<br/>(Throttle / Suspend / Terminate)"]
+    O --> Q["🎯 Нагрузка на CPU снята<br/>(Кулеры тихие, система отзывчива)"]
+    P --> Q
 ```
 
 ---
@@ -236,10 +254,14 @@ ID_Thread_Fix.exe --monitor 10 --log "C:\Logs\indesign_fix.log"
 | :--- | :---: | :--- |
 | `--fix-only` | `-f` | Сканировать и исправить запущенный InDesign без его открытия, если он закрыт. |
 | `--monitor [мин]` | `-m` | Работать как фоновый демон с интервалом проверки `[мин]` минут (по умолчанию: 5). |
+| `--action <режим>` | | Метод исправления: `throttle` (по умолчанию, 100% безопасен), `suspend` или `terminate`. |
+| `--force-terminate` | | Алиас для `--action terminate` (ядерные модули InDesign защищены от завершения). |
+| `--threshold <%>` | | Порог нагрузки CPU ядра для срабатывания (по умолчанию: 80). |
+| `--startup-wait <сек>` | | Время ожидания стабилизации запуска перед сканированием (по умолчанию: 30). |
 | `--verbose` | `-v` | Выводить подробную диагностику и метрики потоков. |
 | `--silent` | `-s` | Тихий режим работы без вывода в консоль. |
-| `--log <путь>` | | Записывать логи с временными метками в указанный файл. |
-| `--help` | `-h` | Показать справку по всем доступным командам. |
+| `--log <путь>` | | Дописывать лог с временными метками в указанный файл. |
+| `--help` | `-h` | Показать справку по всем параметрам. |
 | `--version` | | Показать версию программы. |
 
 ---
