@@ -43,7 +43,7 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 * **[Download latest ID_Thread_Fix.exe (GitHub Release)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
 * **[Direct Download from Repository (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
 
-*No installation required. Single portable `.exe` file (~100 KB).*
+*No installation required. Single portable `.exe` file (328 KB).*
 
 ---
 
@@ -57,7 +57,7 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 * **⚡ One-Shot Fix Mode (`--fix-only`)**: Instantly attaches to an already-running, lagging InDesign instance and frees the CPU in seconds without restarting.
 * **🔄 Background Daemon Mode (`--monitor`)**: Can run in the background (or via Task Scheduler) to periodically check and suspend runaway threads every $N$ minutes.
 * **📂 Guaranteed Log Persistence**: Automatically writes diagnostic logs to `%LOCALAPPDATA%\ID_Thread_Fix\indesign_fix.log`, ensuring write access even when running from protected locations like `Program Files`.
-* **🪶 Zero Dependencies & Portable**: Single standalone `.exe` (~100 KB) with native .NET Framework support built into every Windows 10/11 system.
+* **🪶 Zero Dependencies & Portable**: Single standalone `.exe` (328 KB) with native .NET Framework support built into every Windows 10/11 system.
 
 ---
 
@@ -176,7 +176,7 @@ The resulting executable will be placed in the `dist/` directory.
 * **[Скачать релиз ID_Thread_Fix.exe (GitHub Releases)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
 * **[Прямое скачивание из репозитория (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
 
-*Не требует установки. Один портативный файл `.exe` (~100 КБ).*
+*Не требует установки. Один портативный файл `.exe` (328 КБ).*
 
 ---
 
@@ -190,7 +190,7 @@ The resulting executable will be placed in the `dist/` directory.
 * **⚡ Мгновенный фикс (`--fix-only`)**: Подключается к уже открытому InDesign и мгновенно снимает зависшую нагрузку без перезапуска программы.
 * **🔄 Фоновый мониторинг (`--monitor`)**: Работает в фоне и периодически проверяет и замораживает зацикленные потоки каждые $N$ минут.
 * **📂 Гарантированная запись логов**: Логи пишутся в `%LOCALAPPDATA%\ID_Thread_Fix\indesign_fix.log` — они сохраняются всегда, даже если утилита запущена из защищенной папки `Program Files`.
-* **🪶 Без зависимостей и установки**: Легковесный бинарник (~100 КБ), работающий на любой Windows 10/11 без установки стороннего ПО.
+* **🪶 Без зависимостей и установки**: Легковесный бинарник (328 КБ), работающий на любой Windows 10/11 без установки стороннего ПО.
 
 ---
 
