@@ -156,6 +156,29 @@ The resulting executable will be placed in the `dist/` directory.
 **[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
 * A powerful Photoshop plugin powered by ComfyUI, providing direct integration with local generative models.
 
+### 💎 QR Code with Custom Shape Logo
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/ai-code-pro">
+        <img src="assets/ai_code_pro.png" width="130" alt="AI Code PRO - Custom Shape Logo QR Code" /><br/>
+        <b>AI Code PRO</b>
+      </a><br/>
+      <sub>Vector Barcodes (18 Standards) & Designer QR Codes for <b>Adobe Illustrator</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/ai-code-pro"><img src="https://img.shields.io/badge/PRO-Illustrator%20Extension-orange.svg" alt="AI Code PRO" /></a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/id-code-pro">
+        <img src="assets/id_code_pro.png" width="130" alt="ID Code PRO - Custom Shape Logo QR Code" /><br/>
+        <b>ID Code PRO</b>
+      </a><br/>
+      <sub>Vector Barcodes (18 Standards) & Designer QR Codes for <b>Adobe InDesign</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/id-code-pro"><img src="https://img.shields.io/badge/PRO-InDesign%20Extension-purple.svg" alt="ID Code PRO" /></a>
+    </td>
+  </tr>
+</table>
+
 ---
 
 <a id="русский"></a>
@@ -279,6 +302,29 @@ dotnet build -c Release
 
 **[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
 * Мощный плагин для Photoshop на базе ComfyUI, обеспечивающий прямую интеграцию с локальными генеративными моделями.
+
+### 💎 QR код с логотипом произвольной формы
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/ai-code-pro">
+        <img src="assets/ai_code_pro.png" width="130" alt="AI Code PRO - QR код с логотипом произвольной формы" /><br/>
+        <b>AI Code PRO</b>
+      </a><br/>
+      <sub>Генератор векторных штрихкодов (18 стандартов) и дизайнерских QR-кодов для <b>Adobe Illustrator</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/ai-code-pro"><img src="https://img.shields.io/badge/PRO-Расширение%20Illustrator-orange.svg" alt="AI Code PRO" /></a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/id-code-pro">
+        <img src="assets/id_code_pro.png" width="130" alt="ID Code PRO - QR код с логотипом произвольной формы" /><br/>
+        <b>ID Code PRO</b>
+      </a><br/>
+      <sub>Генератор векторных штрихкодов (18 стандартов) и дизайнерских QR-кодов для <b>Adobe InDesign</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/id-code-pro"><img src="https://img.shields.io/badge/PRO-Расширение%20InDesign-purple.svg" alt="ID Code PRO" /></a>
+    </td>
+  </tr>
+</table>
 
 ---
 
