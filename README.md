@@ -9,7 +9,7 @@
 **Safe and lightweight CPU 100% thread fix utility and launcher for Adobe InDesign (2020 – 2026+)**
 
 [![Download ID_Thread_Fix.exe](https://img.shields.io/badge/Download-ID__Thread__Fix.exe-2ea44f?style=for-the-badge&logo=windows)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)
-[![Direct Download from Repo](https://img.shields.io/badge/Direct_Repo_Download-dist%2FID__Thread__Fix.exe-0078d7?style=for-the-badge&logo=github)](dist/ID_Thread_Fix.exe?raw=true)
+[![Direct Download from Repo](https://img.shields.io/badge/Direct_Repo_Download-dist%2FID__Thread__Fix.exe-0078d7?style=for-the-badge&logo=github)](https://raw.githubusercontent.com/SaidAuita/ID_Thread_Fix/main/dist/ID_Thread_Fix.exe)
 
 <br/>
 
@@ -41,7 +41,7 @@ This bug commonly occurs due to stalled CEP extension panels, Creative Cloud lib
 ### 📥 Download Prebuilt Executable
 
 * **[Download latest ID_Thread_Fix.exe (GitHub Release)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
-* **[Direct Download from Repository (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
+* **[Direct Download from Repository (`dist/ID_Thread_Fix.exe`)](https://raw.githubusercontent.com/SaidAuita/ID_Thread_Fix/main/dist/ID_Thread_Fix.exe)**
 
 *No installation required. Single portable `.exe` file (328 KB).*
 
@@ -197,7 +197,7 @@ The resulting executable will be placed in the `dist/` directory.
 ### 📥 Скачать готовый файл
 
 * **[Скачать релиз ID_Thread_Fix.exe (GitHub Releases)](https://github.com/SaidAuita/ID_Thread_Fix/releases/latest/download/ID_Thread_Fix.exe)**
-* **[Прямое скачивание из репозитория (`dist/ID_Thread_Fix.exe`)](dist/ID_Thread_Fix.exe?raw=true)**
+* **[Прямое скачивание из репозитория (`dist/ID_Thread_Fix.exe`)](https://raw.githubusercontent.com/SaidAuita/ID_Thread_Fix/main/dist/ID_Thread_Fix.exe)**
 
 *Не требует установки. Один портативный файл `.exe` (328 КБ).*
 
